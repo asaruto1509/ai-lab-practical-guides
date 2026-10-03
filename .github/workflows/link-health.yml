@@ -1,0 +1,31 @@
+name: Link health
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**"]
+  schedule:
+    - cron: "31 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check every published page
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import urllib.request
+          base = 'https://asaruto1509.github.io/ai-lab-practical-guides/'
+          paths = ['/'] + ['/' + str(p.relative_to('docs')).removesuffix('index.html') for p in Path('docs').glob('article-*/index.html')]
+          for path in paths:
+              with urllib.request.urlopen(base.rstrip('/') + path, timeout=30) as response:
+                  assert response.status == 200, (path, response.status)
+          PY
