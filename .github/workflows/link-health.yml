@@ -22,10 +22,22 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import time
           import urllib.request
           base = 'https://asaruto1509.github.io/ai-lab-practical-guides/'
           paths = ['/'] + ['/' + str(p.relative_to('docs')).removesuffix('index.html') for p in Path('docs').glob('article-*/index.html')]
           for path in paths:
-              with urllib.request.urlopen(base.rstrip('/') + path, timeout=30) as response:
-                  assert response.status == 200, (path, response.status)
+              last = None
+              for attempt in range(12):
+                  try:
+                      with urllib.request.urlopen(base.rstrip('/') + path, timeout=30) as response:
+                          if response.status == 200:
+                              break
+                          last = response.status
+                  except Exception as exc:
+                      last = type(exc).__name__
+                  if attempt < 11:
+                      time.sleep(10)
+              else:
+                  raise RuntimeError((path, last))
           PY
